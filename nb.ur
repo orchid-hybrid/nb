@@ -18,7 +18,12 @@ table notetbl : {
       Time : time
 } PRIMARY KEY (Id, Revision)
 
-                
+table tagstabl : {
+      Id : int,
+      Tag : string
+} CONSTRAINT Id FOREIGN KEY Id REFERENCES metatbl(Id)
+
+                 
 (*
  * SQL query helpers
  *)
@@ -104,16 +109,12 @@ fun noteTemplate buttons title bodey =
       <body>
         <div>
           <div style={STYLE "float: left;"}>
-          {makeButtons buttons}
+            {makeButtons buttons}
           </div>
           <div style={STYLE "float: right;"}>
-          [
-          <a>home</a>
-          /
-          <a>search</a>
-          ]
-        </div>
-        <h1 style={STYLE "text-align: center;"}>{[title]}</h1>
+            {makeButtons (<xml><a>home</a></xml> :: <xml><a>search</a></xml> :: [])}
+          </div>
+          <h1 style={STYLE "text-align: center;"}>{[title]}</h1>
         </div>
         <hr/>
         {bodey}
@@ -121,14 +122,6 @@ fun noteTemplate buttons title bodey =
         footer
       </body>
     </xml>
-
-fun makeRevision title revision e =
-    let
-        val l = revision title (e.Notetbl.Revision)
-        val t = e.Notetbl.Time
-    in
-        <xml>[<a link={l}>{[t]}</a>]<br/></xml>
-    end
     
 fun error_page message =
     return <xml>
@@ -184,10 +177,10 @@ fun save note title e =
         m <- oneRow
                  (SELECT metatbl.Id, metatbl.Revisions
                   FROM metatbl
-                  WHERE metatbl.Title={[title]});
+                  WHERE metatbl.Title = {[title]});
         dml (UPDATE metatbl
              SET Revisions = {[m.Metatbl.Revisions+1]}
-             WHERE TRUE);
+             WHERE Id = {[m.Metatbl.Id]});
         t <- Datetime.now;
         dml (INSERT INTO notetbl (
                  Id,
@@ -219,11 +212,13 @@ fun note title =
     case lOpt of
         None => create title
       | Some l => noteTemplate
-                      (<xml><a link={edit title}>edit</a></xml> :: [])
+                      (<xml><a link={edit title}>edit</a></xml>
+                      :: <xml><a link={history title}>history</a></xml>
+                      :: [])
                       title
                       <xml>
                         {[l.Content]}
-                        </xml>
+                      </xml>
 and create title = noteTemplate
                        []
                        ("creating " ^ title)
@@ -250,145 +245,27 @@ and revision title rev =
     lOpt <- specific_revision title rev;
     case lOpt of
         None => error_page "revision doesn't exist"
-      | Some l => (* display page *)
-        return <xml></xml>
-and history title =
-    rOpt <- history_of_revisions title (makeRevision title revision);
-    case rOpt of
-        None =>
-        return <xml></xml>
-      | Some r =>
-        return <xml><body>{r}</body></xml>
-
-(*    
-fun make_note f =
-    let
-        val title = f.Moo
-        val content = f.Baz
-    in
-        id <- nextval s;
-        dml (INSERT INTO metatbl (Id, Title, Revisions)
-             VALUES ({[id]}, {[title]}, {[0]}));
-        t <- Datetime.now;
-        dml (INSERT INTO revision (Id, Revision, Content, Time)
-             VALUES ({[id]}, {[0]}, {[content]}, {[Datetime.toTime t]}));
-        return <xml>
-          <body>
-            <h1>Created {[title]}!</h1>
-            <a link={note title}>go to it</a>
-          </body>
-        </xml>
-    end
-        
-and revise_note f =
-    let
-        val title = f.Moo
-        val content = f.Baz
-    in
-        (* source of possible failure *)
-        m <- oneRow (SELECT metatbl.Id, metatbl.Revisions
-                     FROM metatbl
-                     WHERE metatbl.Title={[title]});
-        dml (UPDATE metatbl
-             SET Revisions = {[m.Metatbl.Revisions+1]}
-             WHERE TRUE);
-        t <- Datetime.now;
-        dml (INSERT INTO revision (Id, Revision, Content, Time)
-             VALUES ({[m.Metatbl.Id]}, {[m.Metatbl.Revisions+1]}, {[content]}, {[Datetime.toTime t]}));
-        return <xml>
-          <body>
-            <h1>Revised {[title]}!</h1>
-            <a link={note title}>go back to it</a>
-          </body>
-        </xml>
-    end
-        
-and edit title =
-    lOpt <- latest_revision title;
-    case lOpt of
-        Some l =>
-        return <xml>
-          <body>
-            <h1>Editing {[title]}</h1>
-            <form>
-              <hidden{#Moo} value={title}></hidden>
-              <textarea{#Baz}>{[l.Content]}</textarea>
-              <submit action={revise_note}/>
-                                          </form>
-          </body>
-        </xml>
-      | None => return <xml></xml>
-      
-and prepare_note title =
-    return <xml>
-      <body>
-        <h1>{[title]} doesn't exist</h1>
-        <p>Do you want to create it?</p>
-        <form>
-          <hidden{#Moo} value={title}></hidden>
-          <textarea{#Baz}></textarea>
-          <submit action={make_note} />
-        </form>
-      </body>
-    </xml>
-    
-and note title =
-    lOpt <- latest_revision title;
-        case lOpt of
-            Some l =>
-            return <xml>
-              <body>
-                <h1>{[title]}</h1> [<a link={edit title}>edit</a>]
-                <hr/>
-                <pre>
-                  {[l.Content]}
-                  </pre>
-                  <hr/>
-              </body>
-            </xml>
-          | None => prepare_note title
-
-and revisionX title rev =
-    lOpt <- specific_revision title rev;
-    case lOpt of
-        Some l =>
-        return <xml>
-          <body>
-            <h1>{[title]}</h1> [<a link={edit title}>edit</a>]
-            <hr/>
-            <pre>
-              {[l.Content]}
-              </pre>
-              <hr/>
-          </body>
-        </xml>
-      | None => return <xml></xml> (* todo *)
-        
+      | Some l => noteTemplate
+                      [] (** TODO BACK, FORWARDS, CURRENT, HISTORY **)
+                      (" revision " ^ show rev ^ " of " ^ title)
+                      <xml>
+                        {[l.Content]}
+                        </xml>
 and history title =
     let
-        fun makeRevision e = <xml>revision! at [<a link={revisionX title (e.Notetbl.Revision)}>{[e.Notetbl.Time]}</a>]<br/></xml>
+        fun makeRevision e =
+            let
+                val t = e.Notetbl.Time
+            in
+                <xml>[<a link={revision title (e.Notetbl.Revision)}>{[t]}</a>]<br/></xml>
+            end
     in
-        mOpt <- oneOrNoRows (SELECT metatbl.Id, metatbl.Revisions
-                             FROM metatbl
-                             WHERE metatbl.Title={[title]});
-        case mOpt of
-            Some m => hist <- queryX (SELECT notetbl.Id, notetbl.Revision, notetbl.Time
-                                      FROM revision
-                                      WHERE notetbl.Id={[m.Metatbl.Id]})
-                                     makeRevision;
-            return <xml>
-              <body>
-                <h1>History of {[title]}</h1>
-                {hist}
-              </body>
-            </xml>
-          | None => return <xml></xml> (* TODO *)
+        rOpt <- history_of_revisions title makeRevision;
+        case rOpt of
+            None =>
+            return <xml></xml> (* TODO error message *)
+          | Some r => noteTemplate
+                          [] (* TODO current *)
+                          ("history of " ^ title)
+                          r
     end
-                       
-fun main () = return <xml>
-  <body>
-    welcome
-  </body>
-</xml>
- *)
-    
