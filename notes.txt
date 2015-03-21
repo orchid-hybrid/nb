@@ -1,0 +1,13 @@
+## 1
+
+rm nb.db
+urweb -dbms sqlite -db nb.db nb
+
+builds nb.exe and schema.sql
+
+## 2
+
+sqlite3 nb.db < schema.sql
+
+set up the database from the schema
+

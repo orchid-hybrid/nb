@@ -1,0 +1,6 @@
+sql schema.sql
+database dbname=nb.db
+allow mime text/css
+
+$/datetime
+nb
