@@ -1,6 +1,7 @@
 sql schema.sql
 database dbname=nb.db
 allow mime text/css
+allow url /scripts/style.css
 
 $/datetime
 nb

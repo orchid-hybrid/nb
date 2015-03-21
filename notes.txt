@@ -11,3 +11,25 @@ sqlite3 nb.db < schema.sql
 
 set up the database from the schema
 
+
+## 3
+
+Setting up Nginx so we can serve css and js
+
+/etc/nginx/nginx.conf:
+        #location / {
+        #    root   /usr/share/nginx/html;
+        #    index  index.html index.htm;
+        #}
+
+        location / { # Can't just do /DiffExample/ because of app.js
+            proxy_pass http://localhost:8080;
+        }
+
+        location /scripts/ {
+            root  /usr/share/nginx;
+        }
+
+
+cp mock/style.css /usr/share/nginx/scripts/
+systemctl restart nginx
