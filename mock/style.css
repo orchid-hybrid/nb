@@ -3,8 +3,7 @@ html {
 }
 
 hr {
-    border: 0;
-    background-color: black;
+    border: 1px solid black;
 }
 
 .head {

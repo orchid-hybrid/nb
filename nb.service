@@ -1,0 +1,9 @@
+[Unit]
+Description=Nb
+
+[Service]
+ExecStart=/home/me/Code/nb/nb.exe
+WorkingDirectory=/home/me/Code/nb
+
+[Install]
+WantedBy=default.target
