@@ -233,7 +233,8 @@ and edit title =
     case lOpt of
         None => create title
       | Some l => noteTemplate
-                      []
+                      (<xml><a link={note title}>revert</a></xml>
+                      :: [])
                       ("editing " ^ title)
                       <xml>
                         <form>
@@ -246,7 +247,9 @@ and revision title rev =
     case lOpt of
         None => error_page "revision doesn't exist"
       | Some l => noteTemplate
-                      [] (** TODO BACK, FORWARDS, CURRENT, HISTORY **)
+                      (<xml><a link={note title}>current</a></xml>
+                      :: <xml><a link={history title}>history</a></xml>
+                      :: []) (** TODO BACK, FORWARDS, CURRENT, HISTORY **)
                       (" revision " ^ show rev ^ " of " ^ title)
                       <xml>
                         {[l.Content]}
@@ -262,10 +265,10 @@ and history title =
     in
         rOpt <- history_of_revisions title makeRevision;
         case rOpt of
-            None =>
-            return <xml></xml> (* TODO error message *)
+            None => error_page ("There doesn't seem to be a note called " ^ title)
           | Some r => noteTemplate
-                          [] (* TODO current *)
+                          (<xml><a link={note title}>current</a></xml>
+                          :: [])
                           ("history of " ^ title)
                           r
     end

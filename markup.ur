@@ -135,21 +135,19 @@ fun lines (s : string) =
           | Some (s1, s2) => s1 :: lines s2
     end
 
-fun parse line_blank l =
+fun parse l =
     case l of
-        (Bullet :: (StringToken s) :: []) :: ls => collect_bullets (s :: []) ls
-      | (Heading1 :: (StringToken s) :: Heading1 :: []) :: ls => Heading (1, s) :: parse False ls
-      | (Heading2 :: (StringToken s) :: Heading2 :: []) :: ls => Heading (1, s) :: parse False ls
+        (Bullet :: (StringToken s) :: []) :: ls => collect_bullets False (s :: []) ls
+      | (NumberedBullet :: (StringToken s) :: []) :: ls => collect_bullets True (s :: []) ls
+      | (Heading1 :: (StringToken s) :: Heading1 :: []) :: ls => Heading (1, s) :: parse ls
+      | (Heading2 :: (StringToken s) :: Heading2 :: []) :: ls => Heading (1, s) :: parse ls
       | l :: ls =>
         let
             val p = parse_paragraph l
         in
             (case p of
-                 Nothing => if line_blank then
-                                LineBreak :: parse False ls
-                            else
-                                parse True ls
-               | _ => Paragraph p :: parse False ls)
+                 Nothing => LineBreak :: parse ls
+               | _ => Paragraph p :: parse ls)
         end
       | [] => []
 and parse_paragraph l =
@@ -174,15 +172,20 @@ and parse_paragraph l =
                                         | _ => join_paragraphs (Styled (Error,acc)) (loop None Nothing ls))
               | OpenSquareBrackets :: (StringToken s) :: CloseSquareBrackets :: ls => loop tag (join_paragraphs acc (Link (s, None))) ls
               | OpenSquareBrackets :: (StringToken s) :: LinkBar :: (StringToken n) :: CloseSquareBrackets :: ls => loop tag (join_paragraphs acc (Link (s, Some n))) ls
+              (* NOTE What would t be here? *)
               | t :: ls => join_paragraphs (Styled (Error,String (show t))) (loop tag acc ls)
     in
         loop None Nothing l
     end
 
-and collect_bullets acc l =
-    case l of
-        (Bullet :: (StringToken s) :: []) :: ls => collect_bullets (s :: acc) ls
-      | _ => BulletPoints (False, List.rev acc) :: parse False l
+and collect_bullets numbered acc l =
+    if numbered
+    then case l of
+             (NumberedBullet :: (StringToken s) :: []) :: ls => collect_bullets numbered (s :: acc) ls
+           | _ => BulletPoints (numbered, List.rev acc) :: parse l
+    else case l of
+             (Bullet :: (StringToken s) :: []) :: ls => collect_bullets numbered (s :: acc) ls
+           | _ => BulletPoints (numbered, List.rev acc) :: parse l
 
 fun render link e =
     case e of
@@ -209,7 +212,9 @@ and render_bullets b bs =
                 b :: bs => <xml><li>{[b]}</li>{loop bs}</xml>
               | [] => <xml/>
     in
-        <xml><ul>{loop bs}</ul></xml>
+      if b
+      then <xml><ol>{loop bs}</ol></xml>
+      else <xml><ul>{loop bs}</ul></xml>
     end
 
-fun markup link s = render link (parse False (List.mp tokenize (lines s)))
+fun markup link s = render link (parse (List.mp tokenize (lines s)))
