@@ -217,7 +217,7 @@ fun note title =
                       :: [])
                       title
                       <xml>
-                        {[l.Content]}
+                        {Markup.markup note l.Content}
                       </xml>
 and create title = noteTemplate
                        []

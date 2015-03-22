@@ -2,6 +2,7 @@
 Description=Nb
 
 [Service]
+Environment="LD_LIBRARY_PATH=/usr/local/lib/"
 ExecStart=/home/me/Code/nb/nb.exe
 WorkingDirectory=/home/me/Code/nb
 
